@@ -974,7 +974,7 @@ def main():
         <style>
         .author-credit {
             position: fixed;
-            top: 14px;
+            top: 55px;
             right: 16px;
             z-index: 9999;
             background: rgba(15,12,41,0.88);
