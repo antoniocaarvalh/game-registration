@@ -858,17 +858,6 @@ def main():
     dark = _dark()
     st.markdown(DARK_CSS if dark else LIGHT_CSS, unsafe_allow_html=True)
 
-    st.markdown("""
-    <div style="
-        position:fixed; bottom:14px; left:16px; z-index:9999;
-        background:rgba(15,12,41,0.88);
-        border:1px solid rgba(167,139,250,0.3);
-        border-radius:20px; padding:5px 13px;
-        font-size:0.70em; color:#a78bfa; letter-spacing:0.5px;
-        backdrop-filter:blur(6px); pointer-events:none;
-    ">✦ Criado por Antonio Carvalho - ICMC / USP</div>
-    """, unsafe_allow_html=True)
-
     if "page" not in st.session_state:
         st.session_state["page"] = "dashboard"
     if "active_collection" not in st.session_state:
@@ -994,7 +983,26 @@ def main():
     """, unsafe_allow_html=True)
 
     dispatch.get(st.session_state["page"], page_dashboard)()
-
+    st.markdown("""
+        <style>
+        .author-credit {
+            position: fixed;
+            top: 14px;
+            right: 16px;
+            z-index: 9999;
+            background: rgba(15,12,41,0.88);
+            border: 1px solid rgba(167,139,250,0.3);
+            border-radius: 20px;
+            padding: 5px 13px;
+            font-size: 0.70em;
+            color: #a78bfa;
+            letter-spacing: 0.5px;
+            backdrop-filter: blur(6px);
+            pointer-events: none;
+        }
+        </style>
+        <div class="author-credit">✦ Criado por Antonio Carvalho — ICMC/USP</div>
+    """, unsafe_allow_html=True)
 
 if __name__ == "__main__":
     main()
