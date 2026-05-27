@@ -188,6 +188,35 @@ def search_steam(query: str) -> list:
         return []
 
 
+@st.cache_data(ttl=300)
+def search_rawg(query: str, platform_ids: str, api_key: str) -> list:
+    if not api_key.strip():
+        return []
+    try:
+        r = requests.get(
+            "https://api.rawg.io/api/games",
+            params={
+                "key":       api_key,
+                "search":    query,
+                "platforms": platform_ids,
+                "page_size": 8,
+                "ordering":  "-added",
+            },
+            timeout=7,
+        )
+        r.raise_for_status()
+        return [
+            {
+                "name":      item["name"],
+                "cover_url": item.get("background_image") or "",
+            }
+            for item in r.json().get("results", [])[:8]
+            if item.get("background_image")
+        ]
+    except Exception:
+        return []
+
+
 # ── Constantes ─────────────────────────────────────────────────────────────────
 
 PLATFORMS = ["PC", "PlayStation", "Xbox", "Nintendo", "Mobile"]
@@ -277,6 +306,17 @@ DARK_CSS = """<style>
 
 def _dark() -> bool:
     return get_setting("dark_mode", "0") == "1"
+
+
+def _rawg_key() -> str:
+    """Retorna a chave RAWG — do st.secrets (cloud) ou do banco local."""
+    try:
+        key = st.secrets.get("RAWG_API_KEY", "")
+        if key:
+            return key
+    except Exception:
+        pass
+    return get_setting("rawg_api_key", "")
 
 
 def _plotly_tmpl() -> str:
@@ -453,40 +493,81 @@ def page_dashboard():
             st.caption(f"{row['platform']} · {row['genre']}")
 
 
+def _search_panel(pkey: str, placeholder: str, search_fn, no_key_msg: str = ""):
+    """Painel de busca genérico reutilizável para qualquer catálogo de plataforma."""
+    if no_key_msg:
+        st.info(f"{no_key_msg}  →  ⚙️ Configurações → API Keys")
+        return
+
+    ci, cb = st.columns([5, 1])
+    query = ci.text_input(
+        "", placeholder=placeholder,
+        label_visibility="collapsed", key=f"{pkey}_q",
+    )
+    if cb.button("Buscar", key=f"{pkey}_btn", use_container_width=True) and query.strip():
+        with st.spinner("Buscando…"):
+            st.session_state[f"{pkey}_results"] = search_fn(query.strip())
+
+    results: list = st.session_state.get(f"{pkey}_results", [])
+    if not results:
+        return
+
+    st.caption(f"{len(results)} resultado(s)")
+    cols = st.columns(4)
+    for i, game in enumerate(results):
+        with cols[i % 4]:
+            if game.get("cover_url"):
+                st.image(game["cover_url"], use_container_width=True)
+            st.caption(game["name"])
+            if st.button("✅ Usar", key=f"use_{pkey}_{i}", use_container_width=True):
+                st.session_state["steam_pick"] = game
+                st.session_state[f"{pkey}_results"] = []
+                st.session_state["add_v"] = st.session_state.get("add_v", 0) + 1
+                st.rerun()
+
+
 def page_add_game():
     st.title("➕ Adicionar Jogo")
 
-    with st.expander("🔍 Buscar na Steam (opcional)", expanded=True):
-        ci, cb = st.columns([5, 1])
-        query = ci.text_input(
-            "", placeholder="Ex: Elden Ring, Cyberpunk, Hades…",
-            label_visibility="collapsed", key="steam_query_input",
+    with st.expander("🔍 Buscar em catálogos (opcional)", expanded=True):
+        t_steam, t_nin, t_ps, t_xbox = st.tabs(
+            ["🖥️ Steam", "🍄 Nintendo", "🎮 PlayStation", "❎ Xbox"]
         )
-        if cb.button("Buscar", use_container_width=True) and query.strip():
-            with st.spinner("Buscando…"):
-                st.session_state["steam_results"] = search_steam(query.strip())
+        rawg_key = _rawg_key()
+        rawg_msg = "" if rawg_key else "Configure sua chave RAWG gratuita em rawg.io/apidocs"
 
-        results: list = st.session_state.get("steam_results", [])
-        if results:
-            st.caption(f"{len(results)} resultado(s)")
-            cols = st.columns(4)
-            for i, game in enumerate(results):
-                with cols[i % 4]:
-                    st.image(game["cover_url"], use_container_width=True)
-                    st.caption(game["name"])
-                    if st.button("✅ Usar", key=f"use_steam_{i}", use_container_width=True):
-                        st.session_state["steam_pick"] = game
-                        st.session_state["steam_results"] = []
-                        st.session_state["add_v"] = st.session_state.get("add_v", 0) + 1
-                        st.rerun()
+        with t_steam:
+            _search_panel(
+                "steam", "Ex: Elden Ring, Cyberpunk, Hades…",
+                search_steam,
+            )
+        with t_nin:
+            _search_panel(
+                "nin", "Ex: Zelda, Mario, Metroid, Kirby…",
+                lambda q: search_rawg(q, "7,137", rawg_key),
+                rawg_msg,
+            )
+        with t_ps:
+            _search_panel(
+                "ps", "Ex: God of War, Spider-Man, Horizon…",
+                lambda q: search_rawg(q, "18,187", rawg_key),
+                rawg_msg,
+            )
+        with t_xbox:
+            _search_panel(
+                "xbox", "Ex: Halo, Forza, Sea of Thieves…",
+                lambda q: search_rawg(q, "1,186", rawg_key),
+                rawg_msg,
+            )
 
     if "steam_pick" in st.session_state:
         pick = st.session_state["steam_pick"]
         ci2, ci3 = st.columns([1, 3])
         with ci2:
-            st.image(pick["cover_url"], use_container_width=True)
+            if pick.get("cover_url"):
+                st.image(pick["cover_url"], use_container_width=True)
         with ci3:
-            st.success(f"**{pick['name']}** selecionado da Steam")
+            st.success(f"**{pick['name']}** selecionado")
             if st.button("✖ Limpar seleção"):
                 st.session_state.pop("steam_pick", None)
                 st.session_state["add_v"] = st.session_state.get("add_v", 0) + 1
@@ -503,7 +584,6 @@ def page_add_game():
     if data:
         insert_game(data)
         st.session_state.pop("steam_pick", None)
-        st.session_state.pop("steam_results", None)
         st.success(f"✅ **{data['name']}** adicionado!")
         st.rerun()
 
@@ -670,6 +750,27 @@ def page_statistics():
 def page_settings():
     st.title("⚙️ Configurações")
 
+    # ── API Keys ───────────────────────────────────────────────────────────────
+    st.subheader("🔑 API Keys")
+    rawg_saved = get_setting("rawg_api_key", "") or _rawg_key()
+    new_rawg = st.text_input(
+        "Chave RAWG  (Nintendo / PlayStation / Xbox)",
+        value=rawg_saved,
+        type="password",
+        placeholder="Cole aqui sua chave gratuita",
+        help="Obtenha grátis em rawg.io/apidocs — necessária para buscar jogos fora da Steam",
+    )
+    st.caption(
+        "Acesse [rawg.io/apidocs](https://rawg.io/apidocs), clique em **GET API KEY**, "
+        "crie uma conta gratuita e copie a chave gerada."
+    )
+    if st.button("💾 Salvar chave", key="save_rawg"):
+        set_setting("rawg_api_key", new_rawg.strip())
+        st.success("Chave salva! Agora você pode buscar jogos de Nintendo, PlayStation e Xbox.")
+        st.rerun()
+
+    st.divider()
+
     # ── Aparência ──────────────────────────────────────────────────────────────
     st.subheader("🎨 Aparência")
     dark_now = _dark()
@@ -817,6 +918,43 @@ def main():
         "statistics": page_statistics,
         "settings":   page_settings,
     }
+    # ── Banner / Capa ──────────────────────────────────────────────────────────
+    st.markdown("""
+    <div style="
+        background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+        padding: 22px 32px;
+        border-radius: 14px;
+        margin-bottom: 28px;
+        border: 1px solid rgba(255,255,255,0.08);
+        box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+        display: flex;
+        align-items: center;
+        gap: 20px;
+    ">
+        <div style="font-size: 3.2em; line-height:1">🎮</div>
+        <div>
+            <div style="
+                color: #ffffff;
+                font-size: 1.9em;
+                font-weight: 800;
+                letter-spacing: 3px;
+                line-height: 1.1;
+                text-transform: uppercase;
+            ">Game Registration</div>
+            <div style="
+                color: #a78bfa;
+                font-size: 0.78em;
+                letter-spacing: 5px;
+                margin-top: 4px;
+                text-transform: uppercase;
+            ">✦ rastreador pessoal de jogos ✦</div>
+        </div>
+        <div style="margin-left:auto; display:flex; gap:10px; font-size:1.6em; opacity:0.5">
+            🕹️ 👾 🏆
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
     dispatch.get(st.session_state["page"], page_dashboard)()
 
 
