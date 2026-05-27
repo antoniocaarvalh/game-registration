@@ -8,7 +8,7 @@ from contextlib import contextmanager
 
 DB_PATH = "gametracker.db"
 
-# ── Database ───────────────────────────────────────────────────────────────────
+# ── Base de Dados ───────────────────────────────────────────────────────────────────
 
 @contextmanager
 def get_conn():
@@ -66,7 +66,7 @@ def init_db():
                 pass
 
 
-# ── Settings ───────────────────────────────────────────────────────────────────
+# ── Configuraçoes ───────────────────────────────────────────────────────────────────
 
 def get_setting(key: str, default: str = "") -> str:
     with get_conn() as conn:
@@ -83,7 +83,7 @@ def set_setting(key: str, value: str):
         )
 
 
-# ── Collections ────────────────────────────────────────────────────────────────
+# ── Coleçao ────────────────────────────────────────────────────────────────
 
 def fetch_collections() -> pd.DataFrame:
     with get_conn() as conn:
@@ -107,7 +107,7 @@ def delete_collection(coll_id: int):
         conn.execute("DELETE FROM collections WHERE id=?", (coll_id,))
 
 
-# ── Games ──────────────────────────────────────────────────────────────────────
+# ── Jogos ──────────────────────────────────────────────────────────────────────
 
 def insert_game(data: dict):
     payload = {**data, "created_at": datetime.now().isoformat(timespec="seconds")}
@@ -164,7 +164,7 @@ def fetch_game(game_id: int) -> dict:
     return dict(row) if row else {}
 
 
-# ── Steam API ──────────────────────────────────────────────────────────────────
+# ── API da Steam ──────────────────────────────────────────────────────────────────
 
 @st.cache_data(ttl=300)
 def search_steam(query: str) -> list:
@@ -244,7 +244,7 @@ NO_COVER = (
     "<span style='font-size:2.5em'>🎮</span></div>"
 )
 
-# ── CSS temas ──────────────────────────────────────────────────────────────────
+# ── Capa dos jogos ──────────────────────────────────────────────────────────────────
 
 LIGHT_CSS = """<style>
     [data-testid="stSidebar"] { background: #1a1a2e !important; }
@@ -302,7 +302,7 @@ DARK_CSS = """<style>
     [data-testid="stAlert"] { background-color:#1e2128 !important; }
 </style>"""
 
-# ── Helpers ────────────────────────────────────────────────────────────────────
+# ── Ajudas ────────────────────────────────────────────────────────────────────
 
 def _dark() -> bool:
     return get_setting("dark_mode", "0") == "1"
@@ -750,7 +750,7 @@ def page_statistics():
 def page_settings():
     st.title("⚙️ Configurações")
 
-    # ── API Keys ───────────────────────────────────────────────────────────────
+    # ── API dos outros jogos ───────────────────────────────────────────────────────────────
     st.subheader("🔑 API Keys")
     rawg_saved = get_setting("rawg_api_key", "") or _rawg_key()
     new_rawg = st.text_input(
