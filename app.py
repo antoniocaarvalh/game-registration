@@ -860,13 +860,13 @@ def main():
 
     st.markdown("""
     <div style="
-        position:fixed; bottom:14px; right:16px; z-index:9999;
+        position:fixed; bottom:14px; left:16px; z-index:9999;
         background:rgba(15,12,41,0.88);
         border:1px solid rgba(167,139,250,0.3);
         border-radius:20px; padding:5px 13px;
         font-size:0.70em; color:#a78bfa; letter-spacing:0.5px;
         backdrop-filter:blur(6px); pointer-events:none;
-    ">✦ criado por Antonio Carvalho</div>
+    ">✦ Criado por Antonio Carvalho - ICMC / USP</div>
     """, unsafe_allow_html=True)
 
     if "page" not in st.session_state:
