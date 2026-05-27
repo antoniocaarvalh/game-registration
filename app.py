@@ -894,6 +894,8 @@ def main():
         st.caption(f"Horas: **{df_all['hours'].sum():.0f}h**")
         if dark:
             st.caption("🌙 Modo escuro ativo")
+            st.divider()
+            st.caption("✦ Desenvolvido por Antonio Carvalho / ICMC - USP")
 
     dispatch = {
         "dashboard":  page_dashboard,
