@@ -8,8 +8,8 @@ from contextlib import contextmanager
 
 DB_PATH = "gametracker.db"
 
-# ── Base de Dados ───────────────────────────────────────────────────────────────────
 
+# contexmanager garante que a conexão fecha mesmo se der erro
 @contextmanager
 def get_conn():
     conn = sqlite3.connect(DB_PATH)
@@ -55,7 +55,7 @@ def init_db():
                 value TEXT
             )
         """)
-        # Migrações para bancos antigos
+        # colunas que adicionei depois — ALTER TABLE já ignora se existir
         for col, defn in [
             ("cover_url",     "TEXT"),
             ("collection_id", "INTEGER"),
@@ -65,8 +65,6 @@ def init_db():
             except sqlite3.OperationalError:
                 pass
 
-
-# ── Configuraçoes ───────────────────────────────────────────────────────────────────
 
 def get_setting(key: str, default: str = "") -> str:
     with get_conn() as conn:
@@ -82,8 +80,6 @@ def set_setting(key: str, value: str):
             (key, value),
         )
 
-
-# ── Coleçao ────────────────────────────────────────────────────────────────
 
 def fetch_collections() -> pd.DataFrame:
     with get_conn() as conn:
@@ -103,11 +99,10 @@ def insert_collection(name: str, emoji: str, color: str):
 
 def delete_collection(coll_id: int):
     with get_conn() as conn:
+        # desvincula os jogos antes de apagar a pasta
         conn.execute("UPDATE games SET collection_id=NULL WHERE collection_id=?", (coll_id,))
         conn.execute("DELETE FROM collections WHERE id=?", (coll_id,))
 
-
-# ── Jogos ──────────────────────────────────────────────────────────────────────
 
 def insert_game(data: dict):
     payload = {**data, "created_at": datetime.now().isoformat(timespec="seconds")}
@@ -164,8 +159,7 @@ def fetch_game(game_id: int) -> dict:
     return dict(row) if row else {}
 
 
-# ── API da Steam ──────────────────────────────────────────────────────────────────
-
+# busca na Steam - cache de 5min pra não sobrecarregar a API
 @st.cache_data(ttl=300)
 def search_steam(query: str) -> list:
     try:
@@ -188,6 +182,7 @@ def search_steam(query: str) -> list:
         return []
 
 
+# TODO: a RAWG às vezes devolve resultados duplicados — filtrar isso aqui um dia
 @st.cache_data(ttl=300)
 def search_rawg(query: str, platform_ids: str, api_key: str) -> list:
     if not api_key.strip():
@@ -217,8 +212,6 @@ def search_rawg(query: str, platform_ids: str, api_key: str) -> list:
         return []
 
 
-# ── Constantes ─────────────────────────────────────────────────────────────────
-
 PLATFORMS = ["PC", "PlayStation", "Xbox", "Nintendo", "Mobile"]
 GENRES    = ["Ação","Aventura","RPG","FPS","Estratégia","Simulação","Esporte","Luta","Puzzle","Terror","Outro"]
 STATUSES  = ["Jogando","Zerado","Abandonado","Lista de Desejos"]
@@ -237,14 +230,13 @@ COLL_COLORS = [
     "#FF5722","#795548","#F44336","#00BCD4",
 ]
 
+# placeholder quando o jogo não tem capa cadastrada
 NO_COVER = (
     "<div style='background:#1e1e2e;height:150px;border-radius:8px;"
     "display:flex;align-items:center;justify-content:center;"
     "border:1px solid #333;margin-bottom:4px'>"
     "<span style='font-size:2.5em'>🎮</span></div>"
 )
-
-# ── Capa dos jogos ──────────────────────────────────────────────────────────────────
 
 LIGHT_CSS = """<style>
     [data-testid="stSidebar"] { background: #1a1a2e !important; }
@@ -302,18 +294,17 @@ DARK_CSS = """<style>
     [data-testid="stAlert"] { background-color:#1e2128 !important; }
 </style>"""
 
-# ── Ajudas ────────────────────────────────────────────────────────────────────
 
 def _dark() -> bool:
     return get_setting("dark_mode", "0") == "1"
 
 
 def _rawg_key() -> str:
-    """Retorna a chave RAWG — do st.secrets (cloud) ou do banco local."""
+    # no cloud a chave vem do secrets, localmente vem do banco mesmo
     try:
-        key = st.secrets.get("RAWG_API_KEY", "")
-        if key:
-            return key
+        chave = st.secrets.get("RAWG_API_KEY", "")
+        if chave:
+            return chave
     except Exception:
         pass
     return get_setting("rawg_api_key", "")
@@ -333,9 +324,9 @@ def _date_or_none(val):
 
 
 def _badge(status: str) -> str:
-    c = STATUS_COLORS.get(status, "#888")
+    cor = STATUS_COLORS.get(status, "#888")
     return (
-        f"<span style='background:{c};color:#fff;padding:2px 9px;"
+        f"<span style='background:{cor};color:#fff;padding:2px 9px;"
         f"border-radius:10px;font-size:0.75em;font-weight:600'>{status}</span>"
     )
 
@@ -362,14 +353,12 @@ def _active_coll_label() -> str:
     if cid is None:
         return ""
     df = fetch_collections()
-    row = df[df["id"] == cid]
-    if row.empty:
+    linha = df[df["id"] == cid]
+    if linha.empty:
         return ""
-    r = row.iloc[0]
+    r = linha.iloc[0]
     return f" · {r['emoji']} {r['name']}"
 
-
-# ── Formulário ─────────────────────────────────────────────────────────────────
 
 def game_form(prefill: dict | None = None, key_prefix: str = "f") -> dict | None:
     p = prefill or {}
@@ -452,8 +441,6 @@ def game_form(prefill: dict | None = None, key_prefix: str = "f") -> dict | None
     return None
 
 
-# ── Páginas ────────────────────────────────────────────────────────────────────
-
 def page_dashboard():
     cid = st.session_state.get("active_collection")
     st.title(f"🎮 Dashboard{_active_coll_label()}")
@@ -471,10 +458,10 @@ def page_dashboard():
 
     st.divider()
 
-    sc = df["status"].value_counts().reindex(STATUSES, fill_value=0).reset_index()
-    sc.columns = ["Status","Quantidade"]
+    por_status = df["status"].value_counts().reindex(STATUSES, fill_value=0).reset_index()
+    por_status.columns = ["Status","Quantidade"]
     fig = px.bar(
-        sc, x="Status", y="Quantidade",
+        por_status, x="Status", y="Quantidade",
         color="Status", color_discrete_map=STATUS_COLORS,
         title="Jogos por Status", text="Quantidade",
         template=_plotly_tmpl(),
@@ -484,9 +471,9 @@ def page_dashboard():
     st.plotly_chart(fig, use_container_width=True)
 
     st.subheader("Adicionados Recentemente")
-    recent = df.sort_values("created_at", ascending=False).head(6)
-    cols   = st.columns(3)
-    for i, (_, row) in enumerate(recent.iterrows()):
+    recentes = df.sort_values("created_at", ascending=False).head(6)
+    cols = st.columns(3)
+    for i, (_, row) in enumerate(recentes.iterrows()):
         with cols[i % 3]:
             _cover(row.get("cover_url"), use_container_width=True)
             st.markdown(f"**{row['name']}** {_badge(row['status'])}", unsafe_allow_html=True)
@@ -494,27 +481,27 @@ def page_dashboard():
 
 
 def _search_panel(pkey: str, placeholder: str, search_fn, no_key_msg: str = ""):
-    """Painel de busca genérico reutilizável para qualquer catálogo de plataforma."""
+    # reutilizado pras 4 abas de busca (steam, nintendo, ps, xbox)
     if no_key_msg:
         st.info(f"{no_key_msg}  →  ⚙️ Configurações → API Keys")
         return
 
-    ci, cb = st.columns([5, 1])
-    query = ci.text_input(
+    campo_busca, btn_buscar = st.columns([5, 1])
+    query = campo_busca.text_input(
         "", placeholder=placeholder,
         label_visibility="collapsed", key=f"{pkey}_q",
     )
-    if cb.button("Buscar", key=f"{pkey}_btn", use_container_width=True) and query.strip():
+    if btn_buscar.button("Buscar", key=f"{pkey}_btn", use_container_width=True) and query.strip():
         with st.spinner("Buscando…"):
             st.session_state[f"{pkey}_results"] = search_fn(query.strip())
 
-    results: list = st.session_state.get(f"{pkey}_results", [])
-    if not results:
+    resultados: list = st.session_state.get(f"{pkey}_results", [])
+    if not resultados:
         return
 
-    st.caption(f"{len(results)} resultado(s)")
+    st.caption(f"{len(resultados)} resultado(s)")
     cols = st.columns(4)
-    for i, game in enumerate(results):
+    for i, game in enumerate(resultados):
         with cols[i % 4]:
             if game.get("cover_url"):
                 st.image(game["cover_url"], use_container_width=True)
@@ -562,11 +549,11 @@ def page_add_game():
 
     if "steam_pick" in st.session_state:
         pick = st.session_state["steam_pick"]
-        ci2, ci3 = st.columns([1, 3])
-        with ci2:
+        col_capa, col_info = st.columns([1, 3])
+        with col_capa:
             if pick.get("cover_url"):
                 st.image(pick["cover_url"], use_container_width=True)
-        with ci3:
+        with col_info:
             st.success(f"**{pick['name']}** selecionado")
             if st.button("✖ Limpar seleção"):
                 st.session_state.pop("steam_pick", None)
@@ -575,12 +562,12 @@ def page_add_game():
 
     st.divider()
 
-    prefill  = {**st.session_state.get("steam_pick", {})}
+    prefill = {**st.session_state.get("steam_pick", {})}
     if "collection_id" not in prefill:
         prefill["collection_id"] = st.session_state.get("active_collection")
-    form_ver = st.session_state.get("add_v", 0)
+    versao_form = st.session_state.get("add_v", 0)
 
-    data = game_form(prefill=prefill, key_prefix=f"add{form_ver}")
+    data = game_form(prefill=prefill, key_prefix=f"add{versao_form}")
     if data:
         insert_game(data)
         st.session_state.pop("steam_pick", None)
@@ -603,27 +590,27 @@ def page_game_list():
         f_plat   = c3.selectbox("Plataforma", ["Todos"] + PLATFORMS)
         f_genre  = c4.selectbox("Gênero",     ["Todos"] + GENRES)
 
-    mask = pd.Series([True] * len(df))
+    filtro = pd.Series([True] * len(df))
     if search:
-        mask &= df["name"].str.contains(search, case=False, na=False)
+        filtro &= df["name"].str.contains(search, case=False, na=False)
     if f_status != "Todos":
-        mask &= df["status"] == f_status
+        filtro &= df["status"] == f_status
     if f_plat != "Todos":
-        mask &= df["platform"] == f_plat
+        filtro &= df["platform"] == f_plat
     if f_genre != "Todos":
-        mask &= df["genre"] == f_genre
+        filtro &= df["genre"] == f_genre
 
-    filtered = df[mask].copy()
-    st.caption(f"{len(filtered)} jogo(s)")
-    if filtered.empty:
+    filtrados = df[filtro].copy()
+    st.caption(f"{len(filtrados)} jogo(s)")
+    if filtrados.empty:
         st.warning("Nenhum jogo encontrado.")
         return
 
-    N = 3
-    for start in range(0, len(filtered), N):
-        chunk = filtered.iloc[start : start + N]
-        cols  = st.columns(N)
-        for col, (_, g) in zip(cols, chunk.iterrows()):
+    colunas_por_linha = 3
+    for inicio in range(0, len(filtrados), colunas_por_linha):
+        bloco = filtrados.iloc[inicio : inicio + colunas_por_linha]
+        cols  = st.columns(colunas_por_linha)
+        for col, (_, g) in zip(cols, bloco.iterrows()):
             with col:
                 with st.container(border=True):
                     _cover(g.get("cover_url"), use_container_width=True)
@@ -631,19 +618,19 @@ def page_game_list():
                         f"<b>{g['name']}</b><br>{_badge(g['status'])}",
                         unsafe_allow_html=True,
                     )
-                    parts = [f"🖥 {g['platform']}", f"🎭 {g['genre']}"]
+                    partes = [f"🖥 {g['platform']}", f"🎭 {g['genre']}"]
                     if g.get("rating"):
-                        parts.append(f"⭐ {g['rating']:.1f}")
+                        partes.append(f"⭐ {g['rating']:.1f}")
                     if g.get("hours"):
-                        parts.append(f"⏱ {g['hours']:.0f}h")
-                    st.caption(" · ".join(parts))
+                        partes.append(f"⏱ {g['hours']:.0f}h")
+                    st.caption(" · ".join(partes))
 
-                    be, bd = st.columns(2)
-                    if be.button("✏️", key=f"e_{g['id']}", use_container_width=True):
+                    btn_edit, btn_del = st.columns(2)
+                    if btn_edit.button("✏️", key=f"e_{g['id']}", use_container_width=True):
                         st.session_state["editing_id"] = int(g["id"])
                         st.session_state["page"] = "edit"
                         st.rerun()
-                    if bd.button("🗑️", key=f"d_{g['id']}", use_container_width=True):
+                    if btn_del.button("🗑️", key=f"d_{g['id']}", use_container_width=True):
                         st.session_state["confirm_delete"] = int(g["id"])
 
                     if st.session_state.get("confirm_delete") == int(g["id"]):
@@ -692,43 +679,44 @@ def page_statistics():
         return
 
     tmpl = _plotly_tmpl()
-    tr   = {"paper_bgcolor": "rgba(0,0,0,0)", "plot_bgcolor": "rgba(0,0,0,0)"}
+    # plotly não pega o fundo do streamlit automaticamente, precisa forçar
+    fundo_transparente = {"paper_bgcolor": "rgba(0,0,0,0)", "plot_bgcolor": "rgba(0,0,0,0)"}
 
-    hg = df.groupby("genre")["hours"].sum().reset_index()
-    hg = hg[hg["hours"] > 0]
-    if not hg.empty:
-        fig = px.pie(hg, values="hours", names="genre",
+    horas_por_genero = df.groupby("genre")["hours"].sum().reset_index()
+    horas_por_genero = horas_por_genero[horas_por_genero["hours"] > 0]
+    if not horas_por_genero.empty:
+        fig = px.pie(horas_por_genero, values="hours", names="genre",
                      title="⏱️ Horas por Gênero", hole=0.4, template=tmpl)
         fig.update_traces(textinfo="label+percent")
-        fig.update_layout(**tr)
+        fig.update_layout(**fundo_transparente)
         st.plotly_chart(fig, use_container_width=True)
     else:
         st.info("Registre horas jogadas para ver este gráfico.")
 
     st.divider()
 
-    pc = df["platform"].value_counts().reindex(PLATFORMS, fill_value=0).reset_index()
-    pc.columns = ["Plataforma", "Quantidade"]
-    fig2 = px.bar(pc, x="Plataforma", y="Quantidade",
+    jogos_por_plat = df["platform"].value_counts().reindex(PLATFORMS, fill_value=0).reset_index()
+    jogos_por_plat.columns = ["Plataforma", "Quantidade"]
+    fig2 = px.bar(jogos_por_plat, x="Plataforma", y="Quantidade",
                   title="🖥️ Jogos por Plataforma",
                   color="Quantidade", color_continuous_scale="Blues",
                   text="Quantidade", template=tmpl)
     fig2.update_traces(textposition="outside")
-    fig2.update_layout(coloraxis_showscale=False, **tr)
+    fig2.update_layout(coloraxis_showscale=False, **fundo_transparente)
     st.plotly_chart(fig2, use_container_width=True)
 
     st.divider()
 
-    done = df[(df["status"] == "Zerado") & df["end_date"].notna()].copy()
-    done = done[done["end_date"] != ""]
-    if not done.empty:
-        done["end_date"] = pd.to_datetime(done["end_date"], errors="coerce")
-        done = done.dropna(subset=["end_date"])
-        done["month"] = done["end_date"].dt.to_period("M").astype(str)
-        monthly = done.groupby("month").size().reset_index(name="Zerados").sort_values("month")
-        fig3 = px.line(monthly, x="month", y="Zerados",
+    zerados = df[(df["status"] == "Zerado") & df["end_date"].notna()].copy()
+    zerados = zerados[zerados["end_date"] != ""]
+    if not zerados.empty:
+        zerados["end_date"] = pd.to_datetime(zerados["end_date"], errors="coerce")
+        zerados = zerados.dropna(subset=["end_date"])
+        zerados["month"] = zerados["end_date"].dt.to_period("M").astype(str)
+        por_mes = zerados.groupby("month").size().reset_index(name="Zerados").sort_values("month")
+        fig3 = px.line(por_mes, x="month", y="Zerados",
                        title="✅ Jogos Zerados por Mês", markers=True, template=tmpl)
-        fig3.update_layout(xaxis_title="Mês", **tr)
+        fig3.update_layout(xaxis_title="Mês", **fundo_transparente)
         st.plotly_chart(fig3, use_container_width=True)
     else:
         st.info("Registre a data de término dos jogos zerados para ver este gráfico.")
@@ -736,26 +724,25 @@ def page_statistics():
     st.divider()
 
     st.subheader("Resumo por Gênero")
-    summary = (
+    resumo = (
         df.groupby("genre")
         .agg(Jogos=("id","count"), Horas=("hours","sum"), Nota_Média=("rating","mean"))
         .reset_index().rename(columns={"genre":"Gênero"})
         .sort_values("Jogos", ascending=False)
     )
-    summary["Nota_Média"] = summary["Nota_Média"].round(1)
-    summary["Horas"]      = summary["Horas"].round(1)
-    st.dataframe(summary, use_container_width=True, hide_index=True)
+    resumo["Nota_Média"] = resumo["Nota_Média"].round(1)
+    resumo["Horas"]      = resumo["Horas"].round(1)
+    st.dataframe(resumo, use_container_width=True, hide_index=True)
 
 
 def page_settings():
     st.title("⚙️ Configurações")
 
-    # ── API dos outros jogos ───────────────────────────────────────────────────────────────
     st.subheader("🔑 API Keys")
-    rawg_saved = get_setting("rawg_api_key", "") or _rawg_key()
-    new_rawg = st.text_input(
+    rawg_salva = get_setting("rawg_api_key", "") or _rawg_key()
+    nova_rawg = st.text_input(
         "Chave RAWG  (Nintendo / PlayStation / Xbox)",
-        value=rawg_saved,
+        value=rawg_salva,
         type="password",
         placeholder="Cole aqui sua chave gratuita",
         help="Obtenha grátis em rawg.io/apidocs — necessária para buscar jogos fora da Steam",
@@ -765,23 +752,21 @@ def page_settings():
         "crie uma conta gratuita e copie a chave gerada."
     )
     if st.button("💾 Salvar chave", key="save_rawg"):
-        set_setting("rawg_api_key", new_rawg.strip())
+        set_setting("rawg_api_key", nova_rawg.strip())
         st.success("Chave salva! Agora você pode buscar jogos de Nintendo, PlayStation e Xbox.")
         st.rerun()
 
     st.divider()
 
-    # ── Aparência ──────────────────────────────────────────────────────────────
     st.subheader("🎨 Aparência")
-    dark_now = _dark()
-    new_dark = st.toggle("🌙 Modo Escuro", value=dark_now, key="toggle_dark")
-    if new_dark != dark_now:
-        set_setting("dark_mode", "1" if new_dark else "0")
+    dark_agora = _dark()
+    novo_dark = st.toggle("🌙 Modo Escuro", value=dark_agora, key="toggle_dark")
+    if novo_dark != dark_agora:
+        set_setting("dark_mode", "1" if novo_dark else "0")
         st.rerun()
 
     st.divider()
 
-    # ── Pastas ─────────────────────────────────────────────────────────────────
     st.subheader("🗂️ Gerenciar Pastas")
     colls = fetch_collections()
 
@@ -790,7 +775,7 @@ def page_settings():
     else:
         for _, coll in colls.iterrows():
             cid = int(coll["id"])
-            count = len(fetch_all(cid))
+            qtd_jogos = len(fetch_all(cid))
             c1, c2, c3 = st.columns([1, 6, 1])
             with c1:
                 st.markdown(
@@ -801,7 +786,7 @@ def page_settings():
                 )
             with c2:
                 st.markdown(f"**{coll['name']}**")
-                st.caption(f"{count} jogo(s)")
+                st.caption(f"{qtd_jogos} jogo(s)")
             with c3:
                 if st.button("🗑️", key=f"delc_{cid}", help="Excluir pasta"):
                     st.session_state["confirm_del_coll"] = cid
@@ -822,14 +807,13 @@ def page_settings():
     st.divider()
     st.subheader("➕ Nova Pasta")
 
-    nc1, nc2, nc3 = st.columns([3, 2, 2])
-    new_name  = nc1.text_input("Nome", key="new_coll_name")
-    new_emoji = nc2.selectbox("Ícone", COLL_EMOJIS, key="new_coll_emoji")
-    new_color = nc3.selectbox("Cor",   COLL_COLORS,  key="new_coll_color")
+    col_nome, col_icone, col_cor = st.columns([3, 2, 2])
+    new_name  = col_nome.text_input("Nome", key="new_coll_name")
+    new_emoji = col_icone.selectbox("Ícone", COLL_EMOJIS, key="new_coll_emoji")
+    new_color = col_cor.selectbox("Cor",   COLL_COLORS,  key="new_coll_color")
 
     if new_color in COLL_COLORS:
-        idx = COLL_COLORS.index(new_color)
-        nc3.markdown(
+        col_cor.markdown(
             f"<div style='background:{new_color};height:12px;border-radius:4px'></div>",
             unsafe_allow_html=True,
         )
@@ -843,7 +827,8 @@ def page_settings():
             st.rerun()
 
 
-# ── Main ───────────────────────────────────────────────────────────────────────
+import base64, pathlib  # esqueci de botar lá em cima junto dos outros
+
 
 def main():
     st.set_page_config(
@@ -886,8 +871,8 @@ def main():
         st.markdown("**🗂️ Coleções**")
 
         is_all = st.session_state["active_collection"] is None
-        lbl_all = "📋 **Todos os Jogos**" if is_all else "📋 Todos os Jogos"
-        if st.button(lbl_all, key="nav_all_coll", use_container_width=True):
+        label_todos = "📋 **Todos os Jogos**" if is_all else "📋 Todos os Jogos"
+        if st.button(label_todos, key="nav_all_coll", use_container_width=True):
             st.session_state["active_collection"] = None
             st.rerun()
 
@@ -918,14 +903,14 @@ def main():
         "statistics": page_statistics,
         "settings":   page_settings,
     }
-    # ── Banner / Capa ──────────────────────────────────────────────────────────
+
+    # tenta carregar o logo como svg em base64, se não tiver usa o emoji mesmo
     try:
-        import base64, pathlib
-        svg_path = pathlib.Path(__file__).parent / "logo.svg"
-        svg_b64  = base64.b64encode(svg_path.read_bytes()).decode()
-        logo_tag = f'<img src="data:image/svg+xml;base64,{svg_b64}" style="height:80px;filter:drop-shadow(0 0 10px #a78bfa)">'
+        svg_path    = pathlib.Path(__file__).parent / "logo.svg"
+        logo_base64 = base64.b64encode(svg_path.read_bytes()).decode()
+        logo_html   = f'<img src="data:image/svg+xml;base64,{logo_base64}" style="height:80px;filter:drop-shadow(0 0 10px #a78bfa)">'
     except Exception:
-        logo_tag = '<span style="font-size:3em">🎮</span>'
+        logo_html = '<span style="font-size:3em">🎮</span>'
 
     st.markdown(f"""
     <div style="
@@ -934,12 +919,12 @@ def main():
         border-radius: 14px;
         margin-bottom: 28px;
         border: 1px solid rgba(167,139,250,0.25);
-        box-shadow: 0 8px 32px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.05);
+        box-shadow: 0 8px 32px rgba(0,0,0,0.5);
         display: flex;
         align-items: center;
         gap: 24px;
     ">
-        {logo_tag}
+        {logo_html}
         <div>
             <div style="
                 color: #ffffff;
