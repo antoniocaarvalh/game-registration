@@ -858,6 +858,17 @@ def main():
     dark = _dark()
     st.markdown(DARK_CSS if dark else LIGHT_CSS, unsafe_allow_html=True)
 
+    st.markdown("""
+    <div style="
+        position:fixed; bottom:14px; right:16px; z-index:9999;
+        background:rgba(15,12,41,0.88);
+        border:1px solid rgba(167,139,250,0.3);
+        border-radius:20px; padding:5px 13px;
+        font-size:0.70em; color:#a78bfa; letter-spacing:0.5px;
+        backdrop-filter:blur(6px); pointer-events:none;
+    ">✦ criado por Antonio Carvalho</div>
+    """, unsafe_allow_html=True)
+
     if "page" not in st.session_state:
         st.session_state["page"] = "dashboard"
     if "active_collection" not in st.session_state:
@@ -919,38 +930,65 @@ def main():
         "settings":   page_settings,
     }
     # ── Banner / Capa ──────────────────────────────────────────────────────────
-    st.markdown("""
+    try:
+        import base64, pathlib
+        svg_path = pathlib.Path(__file__).parent / "logo.svg"
+        svg_b64  = base64.b64encode(svg_path.read_bytes()).decode()
+        logo_tag = f'<img src="data:image/svg+xml;base64,{svg_b64}" style="height:80px;filter:drop-shadow(0 0 10px #a78bfa)">'
+    except Exception:
+        logo_tag = '<span style="font-size:3em">🎮</span>'
+
+    st.markdown(f"""
     <div style="
-        background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
-        padding: 22px 32px;
+        background: linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%);
+        padding: 20px 32px;
         border-radius: 14px;
         margin-bottom: 28px;
-        border: 1px solid rgba(255,255,255,0.08);
-        box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+        border: 1px solid rgba(167,139,250,0.25);
+        box-shadow: 0 8px 32px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.05);
         display: flex;
         align-items: center;
-        gap: 20px;
+        gap: 24px;
     ">
-        <div style="font-size: 3.2em; line-height:1">🎮</div>
+        {logo_tag}
         <div>
             <div style="
                 color: #ffffff;
-                font-size: 1.9em;
+                font-size: 1.95em;
                 font-weight: 800;
                 letter-spacing: 3px;
                 line-height: 1.1;
                 text-transform: uppercase;
+                text-shadow: 0 0 20px rgba(167,139,250,0.5);
             ">Game Registration</div>
             <div style="
                 color: #a78bfa;
-                font-size: 0.78em;
+                font-size: 0.76em;
                 letter-spacing: 5px;
-                margin-top: 4px;
+                margin-top: 5px;
                 text-transform: uppercase;
             ">✦ rastreador pessoal de jogos ✦</div>
         </div>
-        <div style="margin-left:auto; display:flex; gap:10px; font-size:1.6em; opacity:0.5">
-            🕹️ 👾 🏆
+        <div style="margin-left:auto; text-align:center; flex-shrink:0;">
+            <div style="
+                background: linear-gradient(135deg, #003FA3 0%, #0055CC 45%, #CC0000 100%);
+                padding: 9px 16px;
+                border-radius: 10px;
+                color: white;
+                font-weight: 900;
+                font-size: 0.82em;
+                letter-spacing: 2px;
+                text-shadow: 0 1px 4px rgba(0,0,0,0.6);
+                border: 1px solid rgba(255,255,255,0.15);
+                box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+            ">🦁 VAI LEÃO!</div>
+            <div style="
+                color: rgba(200,210,255,0.55);
+                font-size: 0.60em;
+                margin-top: 5px;
+                letter-spacing: 2.5px;
+                text-transform: uppercase;
+            ">Clube do Remo</div>
         </div>
     </div>
     """, unsafe_allow_html=True)
