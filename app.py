@@ -986,7 +986,7 @@ def main():
             pointer-events: none;
         }
         </style>
-        <div class="author-credit">✦ Criado por Antonio Carvalho — ICMC/USP</div>
+        <div class="author-credit">✦ Desenvolvido por Antonio Carvalho / ICMC - USP</div>
     """, unsafe_allow_html=True)
 
 if __name__ == "__main__":
