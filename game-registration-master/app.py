@@ -6,10 +6,14 @@ import requests
 from datetime import datetime
 from contextlib import contextmanager
 
+# comecei esse projeto só pra aprender streamlit, aí fui adicionando coisa
+# e acabou virando isso aqui kkk
+
 DB_PATH = "gametracker.db"
 
 
 # contexmanager garante que a conexão fecha mesmo se der erro
+# aprendi isso na aula de lab, muito útil pra não deixar conexão aberta à toa
 @contextmanager
 def get_conn():
     conn = sqlite3.connect(DB_PATH)
@@ -55,7 +59,8 @@ def init_db():
                 value TEXT
             )
         """)
-        # colunas que adicionei depois — ALTER TABLE já ignora se existir
+        # colunas que adicionei depois que já tinha dados salvos, não podia recriar o banco
+        # o ALTER TABLE ignora se a coluna já existir, então tá safe
         for col, defn in [
             ("cover_url",     "TEXT"),
             ("collection_id", "INTEGER"),
@@ -159,7 +164,8 @@ def fetch_game(game_id: int) -> dict:
     return dict(row) if row else {}
 
 
-# busca na Steam - cache de 5min pra não sobrecarregar a API
+# busca na Steam - coloquei cache de 5min pra não bater na API toda hora
+# sem o cache tava travando quando digitava rápido
 @st.cache_data(ttl=300)
 def search_steam(query: str) -> list:
     try:
@@ -183,6 +189,7 @@ def search_steam(query: str) -> list:
 
 
 # TODO: a RAWG às vezes devolve resultados duplicados — filtrar isso aqui um dia
+# já tentei com set() mas perdia a ordem, vou pensar melhor nisso
 @st.cache_data(ttl=300)
 def search_rawg(query: str, platform_ids: str, api_key: str) -> list:
     if not api_key.strip():
@@ -481,7 +488,8 @@ def page_dashboard():
 
 
 def _search_panel(pkey: str, placeholder: str, search_fn, no_key_msg: str = ""):
-    # reutilizado pras 4 abas de busca (steam, nintendo, ps, xbox)
+    # essa função tava repetida 4 vezes antes, aí refatorei pra cá
+    # muito melhor assim, devia ter feito isso antes
     if no_key_msg:
         st.info(f"{no_key_msg}  →  ⚙️ Configurações → API Keys")
         return
@@ -702,7 +710,8 @@ def page_statistics():
         return
 
     tmpl = _plotly_tmpl()
-    # plotly não pega o fundo do streamlit automaticamente, precisa forçar
+    # plotly não pega o fundo do streamlit automaticamente, demorei pra descobrir isso
+    # sem isso os gráficos ficavam com fundo branco no modo escuro, ficava horrível
     fundo_transparente = {"paper_bgcolor": "rgba(0,0,0,0)", "plot_bgcolor": "rgba(0,0,0,0)"}
 
     horas_por_genero = df.groupby("genre")["hours"].sum().reset_index()
@@ -759,7 +768,7 @@ def page_statistics():
 
     st.divider()
 
-    # métricas rápidas
+    # adicionei essas métricas depois, achei que ficou bem mais completo
     total = len(df)
     zerados_total = len(df[df["status"] == "Zerado"])
     taxa = (zerados_total / total * 100) if total else 0
