@@ -9,11 +9,12 @@ Desenvolvido por **Antonio Carvalho — ICMC/USP**.
 
 ### Passo 1 — Baixe o arquivo
 Acesse o repositório no GitHub e clique em **Code → Download ZIP**:
-
+https://github.com/antoniocaarvalh/game-registration
 
 ### Passo 2 — Extraia o ZIP
 Clique com o botão direito no arquivo baixado e selecione **Extrair tudo**.
 Escolha uma pasta de sua preferência (ex: Documentos ou Desktop).
+https://www.python.org/downloads
 
 ### Passo 3 — Instale o Python (se ainda não tiver)
 O app precisa do Python para funcionar. Baixe em:
