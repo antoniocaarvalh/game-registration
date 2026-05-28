@@ -1,69 +1,63 @@
-# 🎮 Game Tracker
+# 🎮 Game Registration
 
-Aplicativo web para rastreamento pessoal de jogos, construído com Python, Streamlit e SQLite.
+Aplicativo desktop para rastreamento pessoal de jogos, construído com Python e Streamlit.
+Desenvolvido por **Antonio Carvalho — ICMC/USP**.
 
-## Funcionalidades
+---
 
-- **Dashboard** — métricas gerais (total de jogos, horas jogadas, jogos zerados, gênero favorito) e gráfico de jogos por status
-- **Adicionar Jogo** — cadastro com nome, plataforma, gênero, status, nota (0–10), review, datas de início/término e horas jogadas
-- **Lista de Jogos** — busca por nome e filtros por status, plataforma e gênero; edição e exclusão inline
-- **Estatísticas** — gráfico de pizza (horas por gênero), barras (jogos por plataforma) e linha (jogos zerados por mês)
+## 📥 Como instalar
 
-## Tecnologias
+### Passo 1 — Baixe o arquivo
+Acesse o repositório no GitHub e clique em **Code → Download ZIP**:
+
+
+### Passo 2 — Extraia o ZIP
+Clique com o botão direito no arquivo baixado e selecione **Extrair tudo**.
+Escolha uma pasta de sua preferência (ex: Documentos ou Desktop).
+
+### Passo 3 — Instale o Python (se ainda não tiver)
+O app precisa do Python para funcionar. Baixe em:
+
+> ⚠️ **Importante:** durante a instalação, marque a opção **"Add Python to PATH"** antes de clicar em Install Now.
+
+### Passo 4 — Execute o setup (apenas na primeira vez)
+Dentro da pasta extraída, dê duplo clique no arquivo **`setup.bat`**.
+Ele instalará automaticamente todas as dependências. Aguarde a mensagem:
+
+
+### Passo 5 — Abra o app
+Dê duplo clique no **`INICIAR.bat`** para abrir o app.
+> A partir de agora, use sempre o **`INICIAR.bat`** para abrir o Game Registration.
+
+---
+
+## ✨ Funcionalidades
+
+- **Dashboard** — métricas gerais: total de jogos, horas jogadas, jogos zerados e gênero favorito
+- **Adicionar Jogo** — cadastro com nome, plataforma, gênero, status, nota (0–10), review, datas e horas jogadas
+- **Busca automática de capas** — integração com Steam, Nintendo, PlayStation e Xbox
+- **Lista de Jogos** — filtros por nome, status, plataforma e gênero; edição e exclusão inline
+- **Coleções/Pastas** — organize seus jogos em pastas personalizadas com ícone e cor
+- **Estatísticas** — gráficos de horas por gênero, jogos por plataforma, ranking de horas, distribuição de notas e mais
+- **Modo escuro/claro** — alternável nas configurações
+
+---
+
+## 🛠️ Tecnologias
 
 | Tecnologia | Uso |
 |------------|-----|
 | Python 3.10+ | Linguagem principal |
 | Streamlit | Interface web |
-| SQLite / sqlite3 | Banco de dados local |
+| SQLite | Banco de dados local |
 | Pandas | Manipulação de dados |
 | Plotly | Gráficos interativos |
+| Requests | Integração com APIs (Steam, RAWG) |
+| pywebview | Janela desktop nativa |
 
-## Como rodar
+---
 
-### 1. Instale as dependências
+## 💡 Observação
 
-```bash
-pip install streamlit pandas plotly
-```
-
-### 2. Execute o aplicativo
-
-```bash
-streamlit run app.py
-```
-
-O banco de dados `gametracker.db` é criado automaticamente na primeira execução.
-
-### 3. Acesse no navegador
-
-```
-http://localhost:8501
-```
-
-## Estrutura
-
-```
-app/
-├── app.py           # Código completo do aplicativo
-├── gametracker.db   # Banco de dados SQLite (gerado automaticamente)
-└── README.md
-```
-
-## Schema do Banco de Dados
-
-```sql
-CREATE TABLE games (
-    id          INTEGER PRIMARY KEY AUTOINCREMENT,
-    name        TEXT    NOT NULL,
-    platform    TEXT    NOT NULL,
-    genre       TEXT    NOT NULL,
-    status      TEXT    NOT NULL,
-    rating      REAL,
-    review      TEXT,
-    start_date  TEXT,
-    end_date    TEXT,
-    hours       REAL    DEFAULT 0,
-    created_at  TEXT    DEFAULT (datetime('now'))
-);
-```
+Cada pessoa que instalar o app terá o seu próprio banco de dados local (`gametracker.db`).
+Seus jogos ficam salvos apenas no seu computador.
