@@ -578,6 +578,29 @@ def page_add_game():
 def page_game_list():
     cid = st.session_state.get("active_collection")
     st.title(f"📋 Lista de Jogos{_active_coll_label()}")
+
+    if cid is not None:
+        sem_pasta = fetch_all(collection_id=None)
+        sem_pasta = sem_pasta[sem_pasta["collection_id"].isna()]
+        if not sem_pasta.empty:
+            with st.expander("➕ Adicionar jogo existente a esta pasta", expanded=False):
+                opcoes = {f"{row['name']} ({row['platform']})": int(row["id"])
+                          for _, row in sem_pasta.iterrows()}
+                selecionados = st.multiselect(
+                    "Selecione os jogos sem pasta para adicionar aqui:",
+                    options=list(opcoes.keys()),
+                    key="mover_jogos",
+                )
+                if st.button("✅ Mover para esta pasta", disabled=not selecionados, use_container_width=True):
+                    with get_conn() as conn:
+                        for nome in selecionados:
+                            conn.execute(
+                                "UPDATE games SET collection_id=? WHERE id=?",
+                                (cid, opcoes[nome]),
+                            )
+                    st.success(f"{len(selecionados)} jogo(s) adicionado(s) à pasta!")
+                    st.rerun()
+
     df = fetch_all(cid)
     if df.empty:
         st.info("Nenhum jogo encontrado.")
@@ -733,6 +756,95 @@ def page_statistics():
     resumo["Nota_Média"] = resumo["Nota_Média"].round(1)
     resumo["Horas"]      = resumo["Horas"].round(1)
     st.dataframe(resumo, use_container_width=True, hide_index=True)
+
+    st.divider()
+
+    # métricas rápidas
+    total = len(df)
+    zerados_total = len(df[df["status"] == "Zerado"])
+    taxa = (zerados_total / total * 100) if total else 0
+    media_nota = df[df["rating"] > 0]["rating"].mean()
+    media_horas = df[df["hours"] > 0]["hours"].mean()
+
+    m1, m2, m3, m4 = st.columns(4)
+    m1.metric("🏁 Taxa de Conclusão",  f"{taxa:.0f}%")
+    m2.metric("⭐ Nota Média Geral",   f"{media_nota:.1f}" if not pd.isna(media_nota) else "—")
+    m3.metric("⏱️ Média de Horas/Jogo", f"{media_horas:.0f}h" if not pd.isna(media_horas) else "—")
+    m4.metric("🗂️ Plataformas Usadas", df["platform"].nunique())
+
+    st.divider()
+
+    # top 5 jogos com mais horas
+    top_horas = df[df["hours"] > 0].nlargest(5, "hours")[["name", "hours", "platform"]]
+    if not top_horas.empty:
+        fig4 = px.bar(
+            top_horas, x="hours", y="name", orientation="h",
+            title="🏆 Top 5 Jogos com Mais Horas",
+            color="platform", text="hours", template=tmpl,
+            labels={"hours": "Horas", "name": "Jogo", "platform": "Plataforma"},
+        )
+        fig4.update_traces(texttemplate="%{text:.0f}h", textposition="outside")
+        fig4.update_layout(yaxis={"categoryorder": "total ascending"}, **fundo_transparente)
+        st.plotly_chart(fig4, use_container_width=True)
+    else:
+        st.info("Registre horas jogadas para ver o ranking.")
+
+    st.divider()
+
+    # distribuição de notas
+    notas = df[df["rating"] > 0]["rating"]
+    if not notas.empty:
+        fig5 = px.histogram(
+            notas, x=notas, nbins=10,
+            title="⭐ Distribuição de Notas",
+            labels={"x": "Nota", "count": "Qtd. Jogos"},
+            template=tmpl, color_discrete_sequence=["#a78bfa"],
+        )
+        fig5.update_layout(bargap=0.1, **fundo_transparente)
+        st.plotly_chart(fig5, use_container_width=True)
+    else:
+        st.info("Avalie seus jogos para ver a distribuição de notas.")
+
+    st.divider()
+
+    # nota média por plataforma
+    nota_plat = (
+        df[df["rating"] > 0]
+        .groupby("platform")["rating"].mean()
+        .reset_index()
+        .rename(columns={"platform": "Plataforma", "rating": "Nota Média"})
+        .sort_values("Nota Média", ascending=False)
+    )
+    if not nota_plat.empty:
+        nota_plat["Nota Média"] = nota_plat["Nota Média"].round(1)
+        fig6 = px.bar(
+            nota_plat, x="Plataforma", y="Nota Média",
+            title="🎯 Nota Média por Plataforma",
+            color="Nota Média", color_continuous_scale="Purples",
+            text="Nota Média", template=tmpl,
+        )
+        fig6.update_traces(textposition="outside")
+        fig6.update_layout(coloraxis_showscale=False, yaxis_range=[0, 10.5], **fundo_transparente)
+        st.plotly_chart(fig6, use_container_width=True)
+
+    st.divider()
+
+    # jogos adicionados por mês
+    df_datas = df[df["created_at"].notna()].copy()
+    df_datas["created_at"] = pd.to_datetime(df_datas["created_at"], errors="coerce")
+    df_datas = df_datas.dropna(subset=["created_at"])
+    if not df_datas.empty:
+        df_datas["mes"] = df_datas["created_at"].dt.to_period("M").astype(str)
+        por_mes_add = df_datas.groupby("mes").size().reset_index(name="Adicionados").sort_values("mes")
+        fig7 = px.bar(
+            por_mes_add, x="mes", y="Adicionados",
+            title="📅 Jogos Adicionados por Mês",
+            text="Adicionados", template=tmpl,
+            color_discrete_sequence=["#7c3aed"],
+        )
+        fig7.update_traces(textposition="outside")
+        fig7.update_layout(xaxis_title="Mês", **fundo_transparente)
+        st.plotly_chart(fig7, use_container_width=True)
 
 
 def page_settings():
@@ -894,6 +1006,13 @@ def main():
         st.caption(f"Horas: **{df_all['hours'].sum():.0f}h**")
         if dark:
             st.caption("🌙 Modo escuro ativo")
+        st.divider()
+        st.markdown(
+            "<div style='text-align:center; color:#a78bfa; font-size:0.85em; font-weight:600; padding:4px 0'>"
+            "Desenvolvido por<br><span style='font-size:1.1em'>Antonio Carvalho</span><br>"
+            "<span style='letter-spacing:2px; font-size:0.85em'>ICMC/USP</span></div>",
+            unsafe_allow_html=True,
+        )
 
     dispatch = {
         "dashboard":  page_dashboard,
@@ -986,7 +1105,7 @@ def main():
             pointer-events: none;
         }
         </style>
-        <div class="author-credit">✦ Criado por Antonio Carvalho — ICMC/USP</div>
+        <div class="author-credit">Desenvolvido por Antonio Carvalho - ICMC/USP</div>
     """, unsafe_allow_html=True)
 
 if __name__ == "__main__":
