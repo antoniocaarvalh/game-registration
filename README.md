@@ -5,6 +5,18 @@ Desenvolvido por **Antonio Carvalho — ICMC/USP**.
 
 ---
 
+## 📸 Screenshots
+
+| Dashboard | Lista de Jogos |
+|-----------|---------------|
+| ![Dashboard](docs/screenshots/dashboard.png) | ![Lista de Jogos](docs/screenshots/lista_jogos.png) |
+
+| Adicionar Jogo | Estatísticas |
+|----------------|-------------|
+| ![Adicionar Jogo](docs/screenshots/adicionar_jogo.png) | ![Estatísticas](docs/screenshots/estatisticas.png) |
+
+---
+
 ## 📥 Como instalar
 
 ### Passo 1 — Baixe o arquivo
