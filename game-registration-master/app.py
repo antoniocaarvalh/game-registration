@@ -239,9 +239,9 @@ COLL_COLORS = [
 
 # placeholder quando o jogo não tem capa cadastrada
 NO_COVER = (
-    "<div style='background:#1e1e2e;height:150px;border-radius:8px;"
+    "<div style='background:#1e1e2e;height:150px;border-radius:6px;"
     "display:flex;align-items:center;justify-content:center;"
-    "border:1px solid #333;margin-bottom:4px'>"
+    "border:1px solid #2a2a2a;margin-bottom:4px'>"
     "<span style='font-size:2.5em'>🎮</span></div>"
 )
 
@@ -333,8 +333,8 @@ def _date_or_none(val):
 def _badge(status: str) -> str:
     cor = STATUS_COLORS.get(status, "#888")
     return (
-        f"<span style='background:{cor};color:#fff;padding:2px 9px;"
-        f"border-radius:10px;font-size:0.75em;font-weight:600'>{status}</span>"
+        f"<span style='background:{cor};color:white;padding:3px 8px;"
+        f"border-radius:12px;font-size:.75em;font-weight:bold'>{status}</span>"
     )
 
 
@@ -734,7 +734,8 @@ def page_statistics():
                   color="Quantidade", color_continuous_scale="Blues",
                   text="Quantidade", template=tmpl)
     fig2.update_traces(textposition="outside")
-    fig2.update_layout(coloraxis_showscale=False, **fundo_transparente)
+    fig2.update_layout(coloraxis_showscale=False,
+                       paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)")
     st.plotly_chart(fig2, use_container_width=True)
 
     st.divider()
@@ -748,7 +749,8 @@ def page_statistics():
         por_mes = zerados.groupby("month").size().reset_index(name="Zerados").sort_values("month")
         fig3 = px.line(por_mes, x="month", y="Zerados",
                        title="✅ Jogos Zerados por Mês", markers=True, template=tmpl)
-        fig3.update_layout(xaxis_title="Mês", **fundo_transparente)
+        fig3.update_layout(xaxis_title="Mês",
+                           paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)")
         st.plotly_chart(fig3, use_container_width=True)
     else:
         st.info("Registre a data de término dos jogos zerados para ver este gráfico.")
@@ -809,7 +811,8 @@ def page_statistics():
             labels={"x": "Nota", "count": "Qtd. Jogos"},
             template=tmpl, color_discrete_sequence=["#a78bfa"],
         )
-        fig5.update_layout(bargap=0.1, **fundo_transparente)
+        fig5.update_layout(bargap=0.1,
+                           paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)")
         st.plotly_chart(fig5, use_container_width=True)
     else:
         st.info("Avalie seus jogos para ver a distribuição de notas.")
@@ -852,7 +855,8 @@ def page_statistics():
             color_discrete_sequence=["#7c3aed"],
         )
         fig7.update_traces(textposition="outside")
-        fig7.update_layout(xaxis_title="Mês", **fundo_transparente)
+        fig7.update_layout(xaxis_title="Mês",
+                           paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)")
         st.plotly_chart(fig7, use_container_width=True)
 
 
