@@ -17,11 +17,11 @@ Não precisa instalar nada. Crie sua conta e comece a usar direto no navegador.
 
 | Dashboard | Lista de Jogos |
 |-----------|---------------|
-| ![Dashboard](../docs/screenshots/dashboard.png) | ![Lista de Jogos](../docs/screenshots/lista_jogos.png) |
+| ![Dashboard](https://raw.githubusercontent.com/antoniocaarvalh/game-registration/main/docs/screenshots/dashboard.png) | ![Lista de Jogos](https://raw.githubusercontent.com/antoniocaarvalh/game-registration/main/docs/screenshots/lista_jogos.png) |
 
 | Adicionar Jogo | Estatísticas |
 |----------------|-------------|
-| ![Adicionar Jogo](../docs/screenshots/adicionar_jogo.png) | ![Estatísticas](../docs/screenshots/estatisticas.png) |
+| ![Adicionar Jogo](https://raw.githubusercontent.com/antoniocaarvalh/game-registration/main/docs/screenshots/adicionar_jogo.png) | ![Estatísticas](https://raw.githubusercontent.com/antoniocaarvalh/game-registration/main/docs/screenshots/estatisticas.png) |
 
 ---
 
