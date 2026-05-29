@@ -5,6 +5,12 @@ Desenvolvido por **Antonio Carvalho — ICMC/USP**.
 
 ---
 
+## 📖 Historia
+
+Este app nasceu de uma necessidade pessoal: antes eu controlava meus jogos em planilhas. Aproveitei para colocar em prática o que estava aprendendo e o projeto acabou crescendo além do esperado — de uma ferramenta só minha para um app público.
+
+---
+
 ## 🌐 Acesse o app
 
 **👉 [Clique aqui para acessar](https://game-registration-b2woiypd4qwyhkj65rxwhj.streamlit.app/)**
