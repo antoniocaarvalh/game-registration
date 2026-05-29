@@ -13,15 +13,11 @@ Desenvolvido por **Antonio Carvalho — ICMC/USP**.
 
 ## 📸 Screenshots
 
-![Dashboard](https://raw.githubusercontent.com/antoniocaarvalh/game-registration/main/docs/screenshots/dashboard.png)
-
-![Lista de Jogos](https://raw.githubusercontent.com/antoniocaarvalh/game-registration/main/docs/screenshots/lista_jogos.png)
-
-![Adicionar Jogo](https://raw.githubusercontent.com/antoniocaarvalh/game-registration/main/docs/screenshots/adicionar_jogo.png)
-
-![Estatísticas](https://raw.githubusercontent.com/antoniocaarvalh/game-registration/main/docs/screenshots/estatisticas.png)
-
----
+| Dashboard | Lista de Jogos |
+|-----------|---------------|
+| <img src="https://raw.githubusercontent.com/antoniocaarvalh/game-registration/main/docs/screenshots/dashboard.png" width="400"> | <img src="https://raw.githubusercontent.com/antoniocaarvalh/game-registration/main/docs/screenshots/lista_jogos.png" width="400"> |
+| **Adicionar Jogo** | **Estatísticas** |
+| <img src="https://raw.githubusercontent.com/antoniocaarvalh/game-registration/main/docs/screenshots/adicionar_jogo.png" width="400"> | <img src="https://raw.githubusercontent.com/antoniocaarvalh/game-registration/main/docs/screenshots/estatisticas.png" width="400"> |
 
 ## ✨ Funcionalidades
 
