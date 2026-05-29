@@ -1,6 +1,6 @@
-# 🎮 Game Registration
+# 🎮 GameVault
 
-Rastreador pessoal de jogos com contas individuais na nuvem.
+Sua biblioteca gamer na nuvem, com contas individuais.
 Desenvolvido por **Antonio Carvalho — ICMC/USP**.
 
 ---

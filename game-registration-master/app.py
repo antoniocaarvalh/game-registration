@@ -370,14 +370,14 @@ def _render_banner():
                 line-height: 1.1;
                 text-transform: uppercase;
                 text-shadow: 0 0 20px rgba(167,139,250,0.5);
-            ">Game Registration</div>
+            ">GameVault</div>
             <div style="
                 color: #a78bfa;
                 font-size: 0.76em;
                 letter-spacing: 5px;
                 margin-top: 5px;
                 text-transform: uppercase;
-            ">✦ rastreador pessoal de jogos ✦</div>
+            ">✦ sua biblioteca gamer ✦</div>
         </div>
         <div style="margin-left:auto; text-align:center; flex-shrink:0;">
             <div style="
@@ -1061,7 +1061,7 @@ def page_settings():
 
 def main():
     st.set_page_config(
-        page_title="Game Registration",
+        page_title="GameVault",
         page_icon="🎮",
         layout="wide",
         initial_sidebar_state="expanded",
@@ -1086,7 +1086,7 @@ def main():
     colls = fetch_collections()
 
     with st.sidebar:
-        st.markdown("## 🎮 Game Registration")
+        st.markdown("## 🎮 GameVault")
         st.caption(f"👤 {st.session_state['user'].email}")
         st.divider()
 
